@@ -12,9 +12,91 @@
  *
 **/
 
+uint32_t ctar0;
+uint32_t ctar1;
+
+void updatectars() 
+{
+	uint32_t mcr = SPI0_MCR;
+	if(mcr & SPI_MCR_MDIS) 
+	{
+		SPI0_CTAR0 = ctar0;
+		SPI0_CTAR1 = ctar1;
+	} 
+	else 
+	{
+		SPI0_MCR = mcr | SPI_MCR_MDIS | SPI_MCR_HALT;
+		SPI0_CTAR0 = ctar0;
+		SPI0_CTAR1 = ctar1;
+		SPI0_MCR = mcr;
+	}
+}
+
+void init_raw()
+{
+	SIM_SCGC6 |= SIM_SCGC6_SPI0;
+	CORE_PIN11_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
+	CORE_PIN12_CONFIG = PORT_PCR_MUX(2);
+	CORE_PIN13_CONFIG = PORT_PCR_DSE | PORT_PCR_MUX(2);
+
+	// SPI_CTAR_DBR, SPI_CTAR_BR(0), SPI_CTAR_BR(1)
+	ctar0 = SPI_CTAR_DBR;
+	ctar1 = ctar0;
+	ctar0 |= SPI_CTAR_FMSZ(7);
+	ctar1 |= SPI_CTAR_FMSZ(15);
+	SPI0_MCR = SPI_MCR_MSTR | SPI_MCR_PCSIS(0x1F);
+	SPI0_MCR |= SPI_MCR_CLR_RXF | SPI_MCR_CLR_TXF;
+	updatectars();
+}
+
+void init(uint8_t speed) 
+{
+	init_raw();
+	// Default 1/2 speed
+	uint32_t ctar = SPI_CTAR_DBR;
+	switch(speed) 
+	{
+		case 1: // 1/4
+			ctar = 0;
+			break;
+	
+		case 2: // 1/8
+			ctar = SPI_CTAR_BR(1);
+			break;
+
+		case 3: // 1/12
+			ctar = SPI_CTAR_BR(2);
+			break;
+
+		case 4: // 1/16
+			ctar = SPI_CTAR_BR(3);
+			break;
+
+		case 5: // 1/32
+			ctar = SPI_CTAR_PBR(1) | SPI_CTAR_BR(4);
+			break;
+
+		case 6: // 1/64
+			ctar = SPI_CTAR_PBR(1) | SPI_CTAR_BR(5);
+			break;
+
+		case 7: //1/128
+			ctar = SPI_CTAR_PBR(1) | SPI_CTAR_BR(6);
+			// fall thru
+		default:
+		// default 1/2 speed, this is the maximum.
+		break;
+	}
+	ctar0 = ctar | SPI_CTAR_FMSZ(7);
+	ctar1 = ctar | SPI_CTAR_FMSZ(15);
+	updatectars();
+}
+
 // *** Hardware specific functions ***
 void UTFT::_hw_special_init()
 {
+	/* Maximum speed */
+	init(0); 
 }
 
 void UTFT::LCD_Writ_Bus(char VH,char VL, byte mode)
@@ -38,46 +120,11 @@ void UTFT::LCD_Writ_Bus(char VH,char VL, byte mode)
 				cbi(P_RS, B_RS);
 		}
 
-		if (VL & 0x80)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
-		if (VL & 0x40)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
-		if (VL & 0x20)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
-		if (VL & 0x10)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
-		if (VL & 0x08)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
-		if (VL & 0x04)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
-		if (VL & 0x02)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
-		if (VL & 0x01)
-			sbi(P_SDA, B_SDA);
-		else
-			cbi(P_SDA, B_SDA);
-		pulse_low(P_SCL, B_SCL);
+		/* Hardware SPI */
+		SPI0_SR |= SPI_SR_TCF;
+		SPI0_PUSHR = VL;
+		while (!(SPI0_SR & SPI_SR_TCF)) {}
+	
 		break;
 	case 8:
 		*(volatile uint8_t *)(&GPIOD_PDOR) = VH;

@@ -210,8 +210,12 @@ void UTFT::InitLCD(byte orientation)
 	orient=orientation;
 	_hw_special_init();
 
-	pinMode(__p1,OUTPUT);
-	pinMode(__p2,OUTPUT);
+	/* Don't use  following two lines since they interfere with the Teensy3 SPI drivers */
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+	#else	
+		pinMode(__p1,OUTPUT);
+		pinMode(__p2,OUTPUT);
+	#endif
 	pinMode(__p3,OUTPUT);
 	if (__p4 != NOTINUSE)
 		pinMode(__p4,OUTPUT);
@@ -609,6 +613,12 @@ void UTFT::clrScr()
 	
 	cbi(P_CS, B_CS);
 	clrXY();
+	
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		sbi(P_RS, B_RS);
+		SPI0_SR |= SPI_SR_TFFF;	
+	#endif
+	
 	if (display_transfer_mode!=1)
 		sbi(P_RS, B_RS);
 	if (display_transfer_mode==16)
@@ -617,17 +627,32 @@ void UTFT::clrScr()
 		_fast_fill_8(0,((disp_x_size+1)*(disp_y_size+1)));
 	else
 	{
-		for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
+		if (display_transfer_mode!=1)
 		{
-			if (display_transfer_mode!=1)
-				LCD_Writ_Bus(0,0,display_transfer_mode);
-			else
+			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
 			{
-				LCD_Writ_Bus(1,0,display_transfer_mode);
-				LCD_Writ_Bus(1,0,display_transfer_mode);
+				LCD_Writ_Bus(0,0,display_transfer_mode);
+			}
+		}
+		else
+		{
+			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
+			{			
+				#if defined(__MK20DX128__) || defined(__MK20DX256__)					
+					SPI0_SR |= SPI_SR_TCF;
+					SPI0_PUSHR = 0x00;
+					while (!(SPI0_SR & SPI_SR_TCF));
+					SPI0_SR |= SPI_SR_TCF;
+					SPI0_PUSHR = 0x00;
+					while (!(SPI0_SR & SPI_SR_TCF));
+				#else
+					LCD_Writ_Bus(1,0,display_transfer_mode);
+					LCD_Writ_Bus(1,0,display_transfer_mode);
+				#endif
 			}
 		}
 	}
+	
 	sbi(P_CS, B_CS);
 }
 
@@ -647,6 +672,11 @@ void UTFT::fillScr(word color)
 
 	cbi(P_CS, B_CS);
 	clrXY();
+
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		sbi(P_RS, B_RS);
+	#endif
+
 	if (display_transfer_mode!=1)
 		sbi(P_RS, B_RS);
 	if (display_transfer_mode==16)
@@ -655,14 +685,28 @@ void UTFT::fillScr(word color)
 		_fast_fill_8(ch,((disp_x_size+1)*(disp_y_size+1)));
 	else
 	{
-		for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
+		if (display_transfer_mode!=1)
 		{
-			if (display_transfer_mode!=1)
-				LCD_Writ_Bus(ch,cl,display_transfer_mode);
-			else
+			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
 			{
-				LCD_Writ_Bus(1,ch,display_transfer_mode);
-				LCD_Writ_Bus(1,cl,display_transfer_mode);
+				LCD_Writ_Bus(ch,cl,display_transfer_mode);
+			}
+		}
+		else
+		{
+			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
+			{							
+				#if defined(__MK20DX128__) || defined(__MK20DX256__)
+					SPI0_SR |= SPI_SR_TCF;
+					SPI0_PUSHR = ch;
+					while (!(SPI0_SR & SPI_SR_TCF));
+					SPI0_SR |= SPI_SR_TCF;
+					SPI0_PUSHR = cl;
+					while (!(SPI0_SR & SPI_SR_TCF));
+				#else
+					LCD_Writ_Bus(1,ch,display_transfer_mode);
+					LCD_Writ_Bus(1,cl,display_transfer_mode);
+				#endif
 			}
 		}
 	}
