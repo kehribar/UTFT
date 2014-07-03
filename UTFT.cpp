@@ -631,7 +631,7 @@ void UTFT::clrScr()
 		{
 			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
 			{
-				LCD_Writ_Bus(0,0,display_transfer_mode);
+				LCD_Writ_Bus(1,0,display_transfer_mode);
 			}
 		}
 		else
@@ -652,7 +652,7 @@ void UTFT::clrScr()
 			}
 		}
 	}
-	
+
 	sbi(P_CS, B_CS);
 }
 
