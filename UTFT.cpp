@@ -171,7 +171,19 @@ void UTFT::LCD_Write_COM(char VL)
 		LCD_Writ_Bus(0x00,VL,display_transfer_mode);
 	}
 	else
-		LCD_Writ_Bus(0x00,VL,display_transfer_mode);
+	{
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
+			
+			cbi(P_RS, B_RS);		
+			
+			SPI0_PUSHR = VL;			
+			
+			while((SPI0_SR & (SPI_SR_TXCTR)));						
+
+		#else
+			LCD_Writ_Bus(0x00,VL,display_transfer_mode);
+		#endif
+	}
 }
 
 void UTFT::LCD_Write_DATA(char VH,char VL)
@@ -183,8 +195,19 @@ void UTFT::LCD_Write_DATA(char VH,char VL)
 	}
 	else
 	{
-		LCD_Writ_Bus(0x01,VH,display_transfer_mode);
-		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
+			
+			sbi(P_RS, B_RS);		
+			
+			SPI0_PUSHR = VH;
+			SPI0_PUSHR = VL;
+			
+			while((SPI0_SR & (SPI_SR_TXCTR)));
+			
+		#else
+			LCD_Writ_Bus(0x01,VH,display_transfer_mode);
+			LCD_Writ_Bus(0x01,VL,display_transfer_mode);
+		#endif
 	}
 }
 
@@ -196,7 +219,19 @@ void UTFT::LCD_Write_DATA(char VL)
 		LCD_Writ_Bus(0x00,VL,display_transfer_mode);
 	}
 	else
-		LCD_Writ_Bus(0x01,VL,display_transfer_mode);
+	{
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
+			
+			sbi(P_RS, B_RS);
+			
+			SPI0_PUSHR = VL;
+			
+			while((SPI0_SR & (SPI_SR_TXCTR)));
+
+		#else
+			LCD_Writ_Bus(0x01,VL,display_transfer_mode);
+		#endif
+	}
 }
 
 void UTFT::LCD_Write_COM_DATA(char com1,int dat1)
@@ -638,13 +673,14 @@ void UTFT::clrScr()
 		{
 			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
 			{			
-				#if defined(__MK20DX128__) || defined(__MK20DX256__)					
-					SPI0_SR |= SPI_SR_TCF;
-					SPI0_PUSHR = 0x00;
-					while (!(SPI0_SR & SPI_SR_TCF));
-					SPI0_SR |= SPI_SR_TCF;
-					SPI0_PUSHR = 0x00;
-					while (!(SPI0_SR & SPI_SR_TCF));
+				#if defined(__MK20DX128__) || defined(__MK20DX256__)	
+					
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));
+					SPI0_PUSHR = 0;
+
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));
+					SPI0_PUSHR = 0;					
+
 				#else
 					LCD_Writ_Bus(1,0,display_transfer_mode);
 					LCD_Writ_Bus(1,0,display_transfer_mode);
@@ -652,6 +688,10 @@ void UTFT::clrScr()
 			}
 		}
 	}
+
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		while(SPI0_SR & SPI_SR_TXCTR);
+	#endif
 
 	sbi(P_CS, B_CS);
 }
@@ -669,7 +709,7 @@ void UTFT::fillScr(word color)
 	
 	ch=byte(color>>8);
 	cl=byte(color & 0xFF);
-
+		
 	cbi(P_CS, B_CS);
 	clrXY();
 
@@ -697,12 +737,11 @@ void UTFT::fillScr(word color)
 			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
 			{							
 				#if defined(__MK20DX128__) || defined(__MK20DX256__)
-					SPI0_SR |= SPI_SR_TCF;
-					SPI0_PUSHR = ch;
-					while (!(SPI0_SR & SPI_SR_TCF));
-					SPI0_SR |= SPI_SR_TCF;
-					SPI0_PUSHR = cl;
-					while (!(SPI0_SR & SPI_SR_TCF));
+									
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (2<<12));	
+					SPI0_PUSHR = ch;			
+					SPI0_PUSHR = cl;					
+					
 				#else
 					LCD_Writ_Bus(1,ch,display_transfer_mode);
 					LCD_Writ_Bus(1,cl,display_transfer_mode);
@@ -710,6 +749,11 @@ void UTFT::fillScr(word color)
 			}
 		}
 	}
+
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		while(SPI0_SR & SPI_SR_TXCTR);
+	#endif
+	
 	sbi(P_CS, B_CS);
 }
 
@@ -845,11 +889,31 @@ void UTFT::drawHLine(int x, int y, int l)
 	}
 	else
 	{
-		for (int i=0; i<l+1; i++)
-		{
-			LCD_Write_DATA(fch, fcl);
-		}
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		
+			sbi(P_RS, B_RS);
+		
+			for (int i=0; i<l+1; i++)
+			{			
+				while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));				
+				SPI0_PUSHR = fch;
+
+				while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));
+				SPI0_PUSHR = fcl;
+			}			
+
+			while((SPI0_SR & (SPI_SR_TXCTR)));
+
+		#else
+			
+			for (int i=0; i<l+1; i++)
+			{
+				LCD_Write_DATA(fch, fcl);
+			}
+
+		#endif
 	}
+
 	sbi(P_CS, B_CS);
 	clrXY();
 }
@@ -875,10 +939,29 @@ void UTFT::drawVLine(int x, int y, int l)
 	}
 	else
 	{
-		for (int i=0; i<l+1; i++)
-		{
-			LCD_Write_DATA(fch, fcl);
-		}
+		#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		
+			sbi(P_RS, B_RS);
+		
+			for (int i=0; i<l+1; i++)
+			{			
+				while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));
+				SPI0_PUSHR = fch;
+
+				while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));
+				SPI0_PUSHR = fcl;
+			}
+
+			while((SPI0_SR & (SPI_SR_TXCTR)));
+
+		#else
+			
+			for (int i=0; i<l+1; i++)
+			{
+				LCD_Write_DATA(fch, fcl);
+			}
+
+		#endif
 	}
 	sbi(P_CS, B_CS);
 	clrXY();

@@ -12,6 +12,8 @@
  *
 **/
 
+#define SPI_SR_TXCTR 0x0000f000
+
 uint32_t ctar0;
 uint32_t ctar1;
 
@@ -121,9 +123,8 @@ void UTFT::LCD_Writ_Bus(char VH,char VL, byte mode)
 		}
 
 		/* Hardware SPI */
-		SPI0_SR |= SPI_SR_TCF;
-		SPI0_PUSHR = VL;
-		while (!(SPI0_SR & SPI_SR_TCF)) {}
+		SPI0_PUSHR = VL;						
+		while((SPI0_SR & (SPI_SR_TXCTR)));		
 	
 		break;
 	case 8:
