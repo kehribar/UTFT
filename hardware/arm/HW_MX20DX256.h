@@ -123,8 +123,9 @@ void UTFT::LCD_Writ_Bus(char VH,char VL, byte mode)
 		}
 
 		/* Hardware SPI */
-		SPI0_PUSHR = VL;						
-		while((SPI0_SR & (SPI_SR_TXCTR)));		
+		SPI0_SR |= SPI_SR_TCF;
+		SPI0_PUSHR = VL;
+		while (!(SPI0_SR & SPI_SR_TCF));		
 	
 		break;
 	case 8:

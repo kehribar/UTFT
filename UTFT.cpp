@@ -176,9 +176,9 @@ void UTFT::LCD_Write_COM(char VL)
 			
 			cbi(P_RS, B_RS);		
 			
-			SPI0_PUSHR = VL;			
-			
-			while((SPI0_SR & (SPI_SR_TXCTR)));						
+			SPI0_SR |= SPI_SR_TCF;
+			SPI0_PUSHR = VL;
+			while (!(SPI0_SR & SPI_SR_TCF));					
 
 		#else
 			LCD_Writ_Bus(0x00,VL,display_transfer_mode);
@@ -199,10 +199,13 @@ void UTFT::LCD_Write_DATA(char VH,char VL)
 			
 			sbi(P_RS, B_RS);		
 			
+			SPI0_SR |= SPI_SR_TCF;
 			SPI0_PUSHR = VH;
+			while (!(SPI0_SR & SPI_SR_TCF));
+
+			SPI0_SR |= SPI_SR_TCF;
 			SPI0_PUSHR = VL;
-			
-			while((SPI0_SR & (SPI_SR_TXCTR)));
+			while (!(SPI0_SR & SPI_SR_TCF));
 			
 		#else
 			LCD_Writ_Bus(0x01,VH,display_transfer_mode);
@@ -224,9 +227,9 @@ void UTFT::LCD_Write_DATA(char VL)
 			
 			sbi(P_RS, B_RS);
 			
+			SPI0_SR |= SPI_SR_TCF;
 			SPI0_PUSHR = VL;
-			
-			while((SPI0_SR & (SPI_SR_TXCTR)));
+			while (!(SPI0_SR & SPI_SR_TCF));
 
 		#else
 			LCD_Writ_Bus(0x01,VL,display_transfer_mode);
@@ -689,7 +692,7 @@ void UTFT::clrScr()
 	}
 
 	#if defined(__MK20DX128__) || defined(__MK20DX256__)
-		while(SPI0_SR & SPI_SR_TXCTR);
+		while(SPI0_SR & SPI_SR_TXCTR); delayMicroseconds(2);
 	#endif
 
 	sbi(P_CS, B_CS);
@@ -750,7 +753,7 @@ void UTFT::fillScr(word color)
 	}
 
 	#if defined(__MK20DX128__) || defined(__MK20DX256__)
-		while(SPI0_SR & SPI_SR_TXCTR);
+		while(SPI0_SR & SPI_SR_TXCTR); delayMicroseconds(2);
 	#endif
 	
 	sbi(P_CS, B_CS);
@@ -901,7 +904,7 @@ void UTFT::drawHLine(int x, int y, int l)
 				SPI0_PUSHR = fcl;
 			}			
 
-			while((SPI0_SR & (SPI_SR_TXCTR)));
+			while((SPI0_SR & (SPI_SR_TXCTR))); delayMicroseconds(2);
 
 		#else
 			
@@ -951,7 +954,7 @@ void UTFT::drawVLine(int x, int y, int l)
 				SPI0_PUSHR = fcl;
 			}
 
-			while((SPI0_SR & (SPI_SR_TXCTR)));
+			while((SPI0_SR & (SPI_SR_TXCTR))); delayMicroseconds(2);
 
 		#else
 			
