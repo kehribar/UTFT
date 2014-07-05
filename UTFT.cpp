@@ -651,7 +651,6 @@ void UTFT::clrScr()
 	
 	#if defined(__MK20DX128__) || defined(__MK20DX256__)
 		sbi(P_RS, B_RS);
-		SPI0_SR |= SPI_SR_TFFF;	
 	#endif
 	
 	if (display_transfer_mode!=1)
