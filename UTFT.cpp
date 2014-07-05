@@ -1269,11 +1269,29 @@ void UTFT::drawBitmap(int x, int y, int sx, int sy, bitmapdatatype data, int sca
 		{
 			cbi(P_CS, B_CS);
 			setXY(x, y, x+sx-1, y+sy-1);
-			for (tc=0; tc<(sx*sy); tc++)
-			{
-				col=pgm_read_word(&data[tc]);
-				LCD_Write_DATA(col>>8,col & 0xff);
-			}
+			#if defined(__MK20DX128__) || defined(__MK20DX256__)
+
+				for (tc=0; tc<(sx*sy); tc++)
+				{				
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));
+					SPI0_PUSHR = data[tc] >> 8;
+
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));
+					SPI0_PUSHR = data[tc];						
+				}			
+
+				while((SPI0_SR & (SPI_SR_TXCTR))); delayMicroseconds(2);
+
+			#else
+
+				for (tc=0; tc<(sx*sy); tc++)
+				{
+					col=pgm_read_word(&data[tc]);
+					LCD_Write_DATA(col>>8,col & 0xff);
+				}
+				
+			#endif
+
 			sbi(P_CS, B_CS);
 		}
 		else
