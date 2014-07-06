@@ -234,6 +234,9 @@ class UTFT
 		void	setBrightness(byte br);
 		void	setDisplayPage(byte page);
 		void	setWritePage(byte page);
+		
+		void 	clrWindow(word x1, word y1, word x2, word y2);
+		void	fillWindow(word x1, word y1, word x2, word y2);
 
 /*
 	The functions and variables below should not normally be used.

@@ -698,6 +698,118 @@ void UTFT::clrScr()
 	sbi(P_CS, B_CS);
 }
 
+void UTFT::fillWindow(word x1, word y1, word x2, word y2)
+{
+	long i;
+	long len = ((x2-x1)+1) * ((y2-y1)+1);
+	char ch, cl;
+
+	cbi(P_CS, B_CS);
+	setXY(x1, y1, x2, y2);
+	
+	ch = fch;
+	cl = fcl;
+
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		sbi(P_RS, B_RS);
+	#endif
+
+	if (display_transfer_mode!=1)
+		sbi(P_RS, B_RS);
+	if (display_transfer_mode==16)
+		_fast_fill_16(ch,cl,((disp_x_size+1)*(disp_y_size+1)));
+	else if ((display_transfer_mode==8) and (ch==cl))
+		_fast_fill_8(ch,((disp_x_size+1)*(disp_y_size+1)));
+	else
+	{
+		if (display_transfer_mode!=1)
+		{
+			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
+			{
+				LCD_Writ_Bus(ch,cl,display_transfer_mode);
+			}
+		}
+		else
+		{
+			for (i=0; i<len; i++)
+			{							
+				#if defined(__MK20DX128__) || defined(__MK20DX256__)
+									
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));	
+					SPI0_PUSHR = ch;			
+
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));	
+					SPI0_PUSHR = cl;					
+					
+				#else
+					LCD_Writ_Bus(1,ch,display_transfer_mode);
+					LCD_Writ_Bus(1,cl,display_transfer_mode);
+				#endif
+			}
+		}
+	}
+
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		while(SPI0_SR & SPI_SR_TXCTR); delayMicroseconds(2);
+	#endif
+	
+	sbi(P_CS, B_CS);
+}
+
+void UTFT::clrWindow(word x1, word y1, word x2, word y2)
+{
+	long i;
+	long len = ((x2-x1)+1) * ((y2-y1)+1);
+
+	cbi(P_CS, B_CS);
+	setXY(x1, y1, x2, y2);
+		
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		sbi(P_RS, B_RS);
+	#endif
+
+	if (display_transfer_mode!=1)
+		sbi(P_RS, B_RS);
+	if (display_transfer_mode==16)
+		_fast_fill_16(0x00,0x00,((disp_x_size+1)*(disp_y_size+1)));
+	else if (display_transfer_mode==8)
+		_fast_fill_8(0x00,((disp_x_size+1)*(disp_y_size+1)));
+	else
+	{
+		if (display_transfer_mode!=1)
+		{
+			for (i=0; i<((disp_x_size+1)*(disp_y_size+1)); i++)
+			{
+				LCD_Writ_Bus(0x00,0x00,display_transfer_mode);
+			}
+		}
+		else
+		{
+			for (i=0; i<len; i++)
+			{							
+				#if defined(__MK20DX128__) || defined(__MK20DX256__)
+									
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));	
+					SPI0_PUSHR = 0x00;			
+
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));	
+					SPI0_PUSHR = 0x00;					
+					
+				#else
+					LCD_Writ_Bus(1,0x00,display_transfer_mode);
+					LCD_Writ_Bus(1,0x00,display_transfer_mode);
+				#endif
+			}
+		}
+	}
+
+	#if defined(__MK20DX128__) || defined(__MK20DX256__)
+		while(SPI0_SR & SPI_SR_TXCTR); delayMicroseconds(2);
+	#endif
+	
+	sbi(P_CS, B_CS);
+}
+
 void UTFT::fillScr(byte r, byte g, byte b)
 {
 	word color = ((r&248)<<8 | (g&252)<<3 | (b&248)>>3);
@@ -740,8 +852,10 @@ void UTFT::fillScr(word color)
 			{							
 				#if defined(__MK20DX128__) || defined(__MK20DX256__)
 									
-					while((SPI0_SR & (SPI_SR_TXCTR)) > (2<<12));	
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));	
 					SPI0_PUSHR = ch;			
+
+					while((SPI0_SR & (SPI_SR_TXCTR)) > (3<<12));	
 					SPI0_PUSHR = cl;					
 					
 				#else

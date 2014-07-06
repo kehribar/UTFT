@@ -31,6 +31,8 @@ getFontYsize	KEYWORD2
 setBrightness	KEYWORD2
 setDisplayPage	KEYWORD2
 setWritePage	KEYWORD2
+clrWindow	KEYWORD2
+fillWindow	KEYWORD2
 
 LEFT	LITERAL1
 RIGHT	LITERAL1
